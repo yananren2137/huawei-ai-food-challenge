@@ -10,7 +10,7 @@
 
 3、二阶段需要载入一阶段训练得到的模型，三阶段需要载入二阶段训练得到的模型，通过--model_path参数提供模型路径
 ## 方案简介
-模型方面采用的是efficientnet-b5，数据增强方面使用了随机裁切、翻转、auto_augment、随机擦除以及cutmix, 损失函数采用CrossEntropyLabelSmooth，训练策略方面采用了快照集成（snapshot）思想。
+模型方面采用的是efficientnet-b5，在原始b5模型中增加了cbam注意力模块，数据增强方面使用了随机裁切、翻转、auto_augment、随机擦除以及cutmix, 损失函数采用CrossEntropyLabelSmooth，训练策略方面采用了快照集成（snapshot）思想。
 
 第一阶段训练，图像输入尺寸为400，使用LabelSmooth和cutmix，采用带学习率自动重启的CosineAnnealingWarmRestarts方法，获得5个模型快照，选择val_acc最高的模型，作为第一阶段的训练结果。
 
