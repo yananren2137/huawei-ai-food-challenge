@@ -1,0 +1,1 @@
+# huawei-ai-food-challenge
