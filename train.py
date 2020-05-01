@@ -115,16 +115,16 @@ skf = StratifiedKFold(n_splits=10, random_state=233, shuffle=True)
 
 #训练时的可调超参数
 train_batch_size = args.train_args.batch_size		#训练时的batchsize
-lr = args.train_args.lr								#初始学习率
-size = args.train_args.image_size					#图像尺寸
-epochs = args.train_args.epochs						#总的epochs
-snap_num = args.train_args.snap_num					#快照个数
-weight_decay = args.train_args.weight_decay			#优化器的正则参数
-resize_scale = args.train_args.resize_scale			#随机裁切的resize scale
-erasing_prob = args.train_args.erasing_prob			#随机擦除的概率
-using_cutmix = args.train_args.cutmix				#是否开启cutmix
+lr = args.train_args.lr					#初始学习率
+size = args.train_args.image_size			#图像尺寸
+epochs = args.train_args.epochs				#总的epochs
+snap_num = args.train_args.snap_num			#快照个数
+weight_decay = args.train_args.weight_decay		#优化器的正则参数
+resize_scale = args.train_args.resize_scale		#随机裁切的resize scale
+erasing_prob = args.train_args.erasing_prob		#随机擦除的概率
+using_cutmix = args.train_args.cutmix			#是否开启cutmix
 using_label_smooth = args.train_args.label_smooth	#是否开启labelsmooth
-model_path = args.train_args.model_path				#前一阶段训练得到的模型路径
+model_path = args.train_args.model_path			#前一阶段训练得到的模型路径
 
 if using_label_smooth:
 	criterion = loss.CrossEntropyLabelSmooth(10, epsilon=0.1)
