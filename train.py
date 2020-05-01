@@ -85,7 +85,8 @@ def train(train_loader, model, criterion, optimizer, epoch, scheduler, mixup=Fal
         if i % 100 == 0:
             progress.pr2int(i)
     return top1.avg.data.cpu().numpy(), losses.avg    
-    
+
+#保存val_acc最高的模型，acc相同则保存val_loss较低的模型    
 def save_checkpoint(metrics, val_loss, val_acc, model, current_snapshot, fold_idx):
     if val_acc > metrics['best_acc']:
         metrics['best_acc'] = val_acc
@@ -98,7 +99,8 @@ def save_checkpoint(metrics, val_loss, val_acc, model, current_snapshot, fold_id
 
     if val_loss <= metrics['best_loss']:
         metrics['best_loss'] = val_loss
-        
+ 
+ #在不同的snapshot起始，重置metrics       
 def reset_metrics(metrics, epoch, epochs, current_snapshot, snap_num):
     if epoch == epochs * (current_snapshot + 1) // snap_num:
         metrics['best_acc'] = 10
@@ -108,24 +110,28 @@ def reset_metrics(metrics, epoch, epochs, current_snapshot, snap_num):
     return current_snapshot, metrics
 
 train_df = pd.read_csv('./full_train.csv')
+#分层划分为10折，可以进行十折交叉验证，但是比较耗时
 skf = StratifiedKFold(n_splits=10, random_state=233, shuffle=True)
 
-train_batch_size = args.train_args.batch_size
-lr = args.train_args.lr
-size = args.train_args.image_size
-epochs = args.train_args.epochs
-snap_num = args.train_args.snap_num
-weight_decay = args.train_args.weight_decay
-resize_scale = args.train_args.resize_scale
-erasing_prob = args.train_args.erasing_prob
-using_cutmix = args.train_args.cutmix
-using_label_smooth = args.train_args.label_smooth
-model_path = args.train_args.model_path
+#训练时的可调超参数
+train_batch_size = args.train_args.batch_size		#训练时的batchsize
+lr = args.train_args.lr								#初始学习率
+size = args.train_args.image_size					#图像尺寸
+epochs = args.train_args.epochs						#总的epochs
+snap_num = args.train_args.snap_num					#快照个数
+weight_decay = args.train_args.weight_decay			#优化器的正则参数
+resize_scale = args.train_args.resize_scale			#随机裁切的resize scale
+erasing_prob = args.train_args.erasing_prob			#随机擦除的概率
+using_cutmix = args.train_args.cutmix				#是否开启cutmix
+using_label_smooth = args.train_args.label_smooth	#是否开启labelsmooth
+model_path = args.train_args.model_path				#前一阶段训练得到的模型路径
 
 if using_label_smooth:
 	criterion = loss.CrossEntropyLabelSmooth(10, epsilon=0.1)
 else:
 	criterion = nn.CrossEntropyLoss()
+	
+#训练中记录三个指标：验证集的最佳acc和对应的loss，验证集上的最低loss
 metrics = {'best_acc':10, 'best_acc_loss':100, 'best_loss':100}
 
 train_transform = transforms.Compose([
@@ -133,7 +139,7 @@ train_transform = transforms.Compose([
                     transforms.RandomChoice([transforms.RandomCrop(size, padding=1, pad_if_needed=True, padding_mode='edge'),
                                                 transforms.RandomResizedCrop(size, scale=(resize_scale, 1.0), ratio=(0.8, 1.2))]),
                     transforms.RandomHorizontalFlip(),
-                    auto_augment.AutoAugment(dataset='CIFAR'),
+                    auto_augment.AutoAugment(dataset='CIFAR'),	#auto_augment
                     transforms.ToTensor(),
                     transforms.RandomErasing(p=erasing_prob),
                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -163,6 +169,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(skf.split(train_df['filename'], 
         model.load_state_dict(torch.load(model_path))
     model = model.cuda()
     parameters = []
+    #对不同层的参数分开处理
     for name, param in model.named_parameters():
         if 'fc' in name or 'ca' in name or 'sa' in name:
             parameters.append({'params': param, 'lr': lr})
@@ -171,7 +178,9 @@ for fold_idx, (train_idx, val_idx) in enumerate(skf.split(train_df['filename'], 
         else:
             parameters.append({'params': param, 'lr': lr})
             param.require_grad = True
+    #优化器采用RAdam
     optimizer = newoptim.RAdam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    #学习率衰减采用带自动重启的余弦衰减
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=epochs//snap_num)
     current_snapshot = 0
 
