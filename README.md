@@ -6,9 +6,7 @@
 ## 代码说明
 1、数据在images文件夹内，由于数据量较大，没有上传
 
-2、采用3阶段训练法，分别执行train_stage1.sh、train_stage2.sh、train_stage3.sh
-
-3、二阶段需要载入一阶段训练得到的模型，三阶段需要载入二阶段训练得到的模型，通过--model_path参数提供模型路径
+2、运行run.py，自动完成三阶段训练并生成最终模型
 ## 方案简介
 模型方面采用的是efficientnet-b5，在原始b5模型中增加了cbam注意力模块，数据增强方面使用了随机裁切、翻转、auto_augment、随机擦除以及cutmix, 损失函数采用CrossEntropyLabelSmooth，训练策略方面采用了快照集成（snapshot）思想。
 
