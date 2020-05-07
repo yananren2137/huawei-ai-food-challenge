@@ -123,7 +123,7 @@ using_cutmix = args.train_args.cutmix			#是否开启cutmix
 using_label_smooth = args.train_args.label_smooth	#是否开启labelsmooth
 model_path = args.train_args.model_path			#前一阶段训练得到的模型路径
 
-if using_label_smooth:
+if using_label_smooth == 'True':
 	criterion = loss.CrossEntropyLabelSmooth(10, epsilon=0.1)
 else:
 	criterion = nn.CrossEntropyLoss()
