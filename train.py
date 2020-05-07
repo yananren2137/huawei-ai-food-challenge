@@ -1,6 +1,3 @@
-import sys
-sys.path.append('/home/aistudio/external-libraries')
-
 import os, glob, argparse
 import pandas as pd
 import numpy as np
@@ -167,9 +164,9 @@ for fold_idx, (train_idx, val_idx) in enumerate(skf.split(train_df['filename'], 
     model = mymodel.Net_b5()
     if model_path:
         model.load_state_dict(torch.load(model_path))
+        print('load {}'.format(model_path))
     model = model.cuda()
     parameters = []
-    #对不同层的参数分开处理
     for name, param in model.named_parameters():
         if 'fc' in name or 'ca' in name or 'sa' in name:
             parameters.append({'params': param, 'lr': lr})
@@ -178,11 +175,10 @@ for fold_idx, (train_idx, val_idx) in enumerate(skf.split(train_df['filename'], 
         else:
             parameters.append({'params': param, 'lr': lr})
             param.require_grad = True
-    #优化器采用RAdam
-    optimizer = newoptim.RAdam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    #学习率衰减采用带自动重启的余弦衰减
+    optimizer = newoptim.RAdam(parameters, lr=lr, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=epochs//snap_num)
     current_snapshot = 0
+    snapshots_losses = np.zeros((snap_num, 2))
 
     for epoch in range(epochs):
         print('Epoch: ', epoch)
@@ -191,6 +187,19 @@ for fold_idx, (train_idx, val_idx) in enumerate(skf.split(train_df['filename'], 
         train_acc, train_loss = train(train_loader, model, criterion, optimizer, epoch, scheduler, mixup=using_cutmix)
         val_acc, val_loss = validate(val_loader, model, criterion)
         save_checkpoint(metrics, val_loss, val_acc, model, current_snapshot, fold_idx)
+        snapshots_losses[current_snapshot][0] = metrics['best_acc']
+        snapshots_losses[current_snapshot][1] = metrics['best_acc_loss']
         print('train_loss: {:4f} train_acc: {:4f}'.format(train_loss, train_acc))
         print('val_loss:   {:4f} val_acc:   {:4f}'.format(val_loss, val_acc))
         print('best loss:  {:4f} best acc:  {:4f} lr: {}'.format(metrics['best_loss'], metrics['best_acc'], optimizer.param_groups[0]['lr']))
+    best_acc_snap = snapshots_losses[np.where(snapshots_losses[:,0] == np.max(snapshots_losses))]
+    best = best_acc_snap[np.where(best_acc_snap[:, 1] == np.min(best_acc_snap))]
+    best_num = np.where(snapshots_losses[:, 1] == best[0][1])[0][0]
+    model.load_state_dict(torch.load('./source_code/checkpoint/fold%d_snap%d.pth' % (fold_idx, best_num)))
+    if using_cutmix == True:
+        torch.save(model.state_dict(), './source_code/checkpoint/best_model_%d.pth' % size)
+        print('save best_model_{}'.format(size))
+    else:
+        torch.save(model.state_dict(), './source_code/checkpoint/best_model_final.pth')
+        print('save best_model_final')
+    break
