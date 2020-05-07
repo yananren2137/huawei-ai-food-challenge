@@ -196,7 +196,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(skf.split(train_df['filename'], 
     best = best_acc_snap[np.where(best_acc_snap[:, 1] == np.min(best_acc_snap))]
     best_num = np.where(snapshots_losses[:, 1] == best[0][1])[0][0]
     model.load_state_dict(torch.load('./source_code/checkpoint/fold%d_snap%d.pth' % (fold_idx, best_num)))
-    if using_cutmix == True:
+    if using_cutmix == 'True':
         torch.save(model.state_dict(), './source_code/checkpoint/best_model_%d.pth' % size)
         print('save best_model_{}'.format(size))
     else:
