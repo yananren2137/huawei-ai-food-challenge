@@ -119,11 +119,11 @@ snap_num = args.train_args.snap_num			#快照个数
 weight_decay = args.train_args.weight_decay		#优化器的正则参数
 resize_scale = args.train_args.resize_scale		#随机裁切的resize scale
 erasing_prob = args.train_args.erasing_prob		#随机擦除的概率
-using_cutmix = args.train_args.cutmix			#是否开启cutmix
-using_label_smooth = args.train_args.label_smooth	#是否开启labelsmooth
+using_cutmix = True if args.train_args.cutmix == 'True' else False			#是否开启cutmix
+using_label_smooth = True if args.train_args.label_smooth == 'True' else False		#是否开启labelsmooth
 model_path = args.train_args.model_path			#前一阶段训练得到的模型路径
 
-if using_label_smooth == 'True':
+if using_label_smooth == True:
 	criterion = loss.CrossEntropyLabelSmooth(10, epsilon=0.1)
 else:
 	criterion = nn.CrossEntropyLoss()
@@ -196,7 +196,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(skf.split(train_df['filename'], 
     best = best_acc_snap[np.where(best_acc_snap[:, 1] == np.min(best_acc_snap))]
     best_num = np.where(snapshots_losses[:, 1] == best[0][1])[0][0]
     model.load_state_dict(torch.load('./source_code/checkpoint/fold%d_snap%d.pth' % (fold_idx, best_num)))
-    if using_cutmix == 'True':
+    if using_cutmix == True:
         torch.save(model.state_dict(), './source_code/checkpoint/best_model_%d.pth' % size)
         print('save best_model_{}'.format(size))
     else:
